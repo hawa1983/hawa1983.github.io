@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 10 · Forecasting with Time Series Data · MG628</title>
+<style>
+  :root {
+    --navy:#1B3A5C; --teal:#0D7377; --slate:#4A6580; --amber:#D97706;
+    --green:#15803D; --red:#B91C1C; --text:#1A2B3C; --muted:#6B7E8F;
+    --ltbg:#F4F8FB; --card:#EDF4FC; --white:#ffffff; --border:#D0DFF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Calibri,'Segoe UI',Arial,sans-serif;background:#0f1f33;color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+  #topbar{width:100%;background:var(--navy);color:#9ec8e0;display:flex;align-items:center;justify-content:space-between;padding:11px 20px;position:sticky;top:0;z-index:100;gap:8px;}
+  .course-tag{font-size:12px;letter-spacing:2px;font-weight:700;color:#9ec8e0;white-space:nowrap;}
+  #slide-counter{font-size:14px;color:#c0d8ec;white-space:nowrap;min-width:72px;text-align:right;}
+  #nav{display:flex;gap:8px;}
+  .nav-btn{background:var(--teal);color:white;border:none;border-radius:6px;padding:8px 22px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;}
+  .nav-btn:hover{background:#0a5a5d;}
+  .nav-btn:disabled{background:#2a4a6a;color:#4a6a8a;cursor:default;}
+  #progress-wrap{width:100%;height:4px;background:#1d3050;}
+  #progress-bar{height:4px;background:var(--teal);transition:width .3s;}
+  #slide-area{width:100%;max-width:980px;padding:24px 20px 100px;}
+  .slide{background:var(--white);border-radius:16px;padding:36px 36px 28px;box-shadow:0 4px 28px rgba(0,0,0,.35);display:none;animation:fadein .25s ease;}
+  .slide.active{display:block;}
+  .slide.ltbg{background:var(--ltbg);}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .tag{display:inline-block;background:var(--teal);color:white;font-size:11px;font-weight:700;letter-spacing:1.5px;padding:4px 12px;border-radius:4px;margin-bottom:12px;}
+  .tag.amber{background:var(--amber);} .tag.navy{background:var(--navy);}
+  h1.slide-title{font-family:Cambria,Georgia,serif;font-size:clamp(24px,3.5vw,36px);color:var(--navy);font-weight:700;margin-bottom:20px;line-height:1.2;}
+  h2.slide-subtitle{font-family:Cambria,Georgia,serif;font-size:clamp(15px,2vw,19px);color:var(--teal);margin-bottom:10px;margin-top:20px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0;}
+  .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:16px 0;}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+  @media(max-width:640px){.grid-3,.grid-4{grid-template-columns:1fr;}.grid-2{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;}
+  .card.green-bg{background:#e8f5e9;} .card.amber-bg{background:#fff8e1;} .card.red-bg{background:#fef2f2;}
+  .card-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px;}
+  .ci-navy{background:var(--navy);} .ci-teal{background:var(--teal);} .ci-amber{background:var(--amber);} .ci-slate{background:var(--slate);}
+  .card h3{font-family:Cambria,Georgia,serif;font-size:15px;color:var(--navy);margin-bottom:7px;text-align:center;}
+  .card p{font-size:14px;color:var(--text);line-height:1.6;}
+  ul.slide-list{list-style:none;padding:0;margin:10px 0;}
+  ul.slide-list li{display:flex;gap:12px;align-items:flex-start;padding:7px 0;font-size:15px;color:var(--text);border-bottom:1px solid #edf0f5;line-height:1.6;}
+  ul.slide-list li:last-child{border-bottom:none;}
+  ul.slide-list li .dot{width:9px;height:9px;min-width:9px;border-radius:50%;background:var(--teal);margin-top:8px;}
+  .step-list{list-style:none;padding:0;margin:10px 0;}
+  .step-list li{display:flex;gap:14px;align-items:flex-start;padding:10px 0;font-size:15px;border-bottom:1px solid #edf0f5;line-height:1.6;}
+  .step-list li:last-child{border-bottom:none;}
+  .step-num{width:30px;height:30px;min-width:30px;border-radius:50%;background:var(--teal);color:white;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-top:2px;}
+  .quote-box{background:var(--card);border-left:4px solid var(--teal);border-radius:0 8px 8px 0;padding:14px 18px;font-size:15px;font-style:italic;color:var(--navy);margin:14px 0;line-height:1.7;}
+  .highlight-box{background:var(--card);border-left:4px solid var(--teal);border-radius:0 8px 8px 0;padding:12px 16px;margin:12px 0;font-size:15px;line-height:1.6;}
+  .formula-bar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:13px 18px;font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:var(--navy);text-align:center;margin:14px 0;}
+  pre{background:#0f1f33;color:#93c5fd;border-radius:10px;padding:16px;font-size:13px;overflow-x:auto;margin:14px 0;line-height:1.7;font-family:'Courier New',monospace;}
+  pre .kw{color:#7dd3fc;font-weight:bold;} pre .cm{color:#64748b;font-style:italic;} pre .st{color:#86efac;} pre .fn{color:#fde68a;} pre .num{color:#fb923c;}
+  table.slide-table{width:100%;border-collapse:collapse;font-size:14px;margin:14px 0;}
+  table.slide-table th{background:var(--navy);color:white;padding:11px 13px;text-align:left;font-weight:700;}
+  table.slide-table td{padding:10px 13px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5;}
+  table.slide-table tr:nth-child(even) td{background:var(--card);}
+  table.slide-table td:first-child{font-weight:700;color:var(--navy);}
+  .foot-note{font-size:13px;color:var(--muted);font-style:italic;text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid var(--border);}
+  .presenter-notes{margin-top:22px;border-top:2px dashed var(--border);padding-top:16px;}
+  .notes-label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;cursor:pointer;user-select:none;}
+  .notes-label .toggle-arrow{font-size:10px;transition:transform .2s;color:var(--teal);}
+  .notes-body{display:none;font-size:15px;line-height:1.85;color:#2a3f55;background:#f0f6ff;border-radius:10px;padding:18px 22px;}
+  .notes-body.open{display:block;animation:fadein .2s ease;}
+  .notes-body p{margin-bottom:12px;} .notes-body p:last-child{margin-bottom:0;}
+  .expand-btn{display:inline-flex;align-items:center;gap:7px;background:none;border:1.5px solid var(--teal);color:var(--teal);border-radius:20px;padding:6px 16px;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px;transition:all .2s;}
+  .expand-btn:hover{background:var(--teal);color:white;}
+  .expand-btn .arrow{font-size:10px;transition:transform .2s;}
+  .expand-btn.open .arrow{transform:rotate(180deg);}
+  .detail-panel{display:none;margin-top:12px;padding:16px;background:var(--ltbg);border-radius:10px;border:1px solid var(--border);font-size:14px;line-height:1.7;animation:fadein .2s ease;}
+  .detail-panel.open{display:block;}
+  .detail-panel h4{color:var(--navy);font-family:Cambria,serif;margin-bottom:8px;font-size:15px;}
+  .mistake-card{background:var(--card);border-radius:10px;padding:13px 16px;margin:8px 0;}
+  .bad-row{font-size:14px;color:var(--red);font-weight:700;margin-bottom:5px;}
+  .good-row{font-size:14px;color:var(--green);}
+  .mape-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .mape-chip{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;color:white;}
+  .title-slide-inner{background:var(--navy);border-radius:14px;padding:44px 36px 0;}
+  .title-slide-footer{background:var(--teal);margin:36px -36px 0;padding:16px 36px;border-radius:0 0 14px 14px;}
+  .week-label{font-size:12px;letter-spacing:3px;color:#9ec8e0;font-weight:700;margin-bottom:6px;}
+  .title-slide-inner h1{font-family:Cambria,Georgia,serif;font-size:clamp(30px,5vw,50px);font-weight:700;color:white;line-height:1.15;margin:10px 0 32px;}
+  .tracks-label{font-size:12px;letter-spacing:3px;color:#c0d8ec;font-weight:700;margin-top:5px;}
+  .closing-slide{background:var(--navy);border-radius:14px;padding:30px 28px 0;overflow:hidden;}
+  .closing-footer{background:var(--teal);margin:24px -28px 0;padding:16px 28px;text-align:center;font-size:13px;color:white;border-radius:0 0 14px 14px;}
+  .bar-chart{display:flex;align-items:flex-end;gap:4px;height:100px;padding:4px 0;}
+  .bar-chart .b{flex:1;border-radius:3px 3px 0 0;}
+  .bar-chart-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;}
+  #bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--navy);display:flex;justify-content:center;align-items:center;gap:16px;padding:12px 20px;z-index:100;box-shadow:0 -2px 16px rgba(0,0,0,.45);}
+  #bottom-nav .nav-btn{flex:1;max-width:160px;text-align:center;}
+  @media(max-width:500px){#slide-area{padding:14px 12px 90px;}.slide{padding:22px 18px 20px;}pre{font-size:11px;}ul.slide-list li,.step-list li{font-size:14px;}.notes-body{font-size:14px;}}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span class="course-tag">MG628 · WEEK 10</span>
+  <div id="nav">
+    <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)" disabled>← Back</button>
+    <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">Next →</button>
+  </div>
+  <span id="slide-counter">1 / 42</span>
+</div>
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="slide-area">
+<div class="slide active" id="s1">
+  <div class="title-slide-inner">
+    <div class="week-label">WEEK 10</div>
+    <h1>Forecasting with<br>Time Series Data</h1>
+    <div class="title-slide-footer">
+      <div style="font-size:15px;color:white;">MG628 · Data Analysis for Managerial Decision-Making</div>
+      <div class="tracks-label">MBA · MHA · MPA</div>
+    </div>
+  </div><div class="presenter-notes">
+    <div class="notes-label open" onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▲</span></div>
+    <div class="notes-body open"><p>Welcome, everyone, to Week 10. This week we are stepping into one of the most powerful skill sets you will carry out of this program — the ability to look at historical data and make confident projections about the future.</p><p>Whether you are in the MBA, Healthcare, or Public Administration track, forecasting is not optional. It is how leaders get ahead of problems instead of reacting to them. Let us dive in.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s2">
+  <span class="tag ">MOTIVATION</span>
+  <h1 class="slide-title">Why Forecasting Is a Leadership Superpower</h1>
+  <div class="grid-3">
+    <div class="card"><div class="card-icon ci-navy">🏢</div><h3>MBA</h3><p>Predict inventory demand for a holiday surge — or face a costly stockout and lost revenue.</p></div>
+    <div class="card"><div class="card-icon ci-teal">🏛️</div><h3>MPA</h3><p>Forecast tax revenue and utility demand so infrastructure is ready before the population outgrows it.</p></div>
+    <div class="card"><div class="card-icon ci-amber">🏥</div><h3>MHA</h3><p>Project patient volumes and disease outbreaks for proactive staffing and resource allocation.</p></div>
+  </div>
+  <div class="quote-box">Leaders who anticipate outperform those who react.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Let us start with why this matters. Think about what separates a reactive manager from a strategic leader. It is the ability to look ahead.</p><p>In business, that might mean making sure your shelves are stocked before the holiday rush — not scrambling after the fact. In public administration, it means funding infrastructure before a growing population overwhelms it. In healthcare, it means staffing your ER before flu season peaks, not after patients are already waiting.</p><p>Forecasting is that edge. And this week, you are going to learn how to build it.</p></div>
+  </div>
+</div>
+<div class="slide" id="s3">
+  <span class="tag ">FOUNDATIONS</span>
+  <h1 class="slide-title">What Is Time Series Data?</h1>
+  <div class="quote-box">A time series is a sequence of data points collected at successive, equally-spaced points in time.</div>
+  <div class="grid-2">
+    <div>
+      <h2 class="slide-subtitle">Everyday Examples</h2>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Monthly retail sales over 5 years</span></li><li><span class="dot" ></span><span>Weekly ER admission counts</span></li><li><span class="dot" ></span><span>Daily COVID-19 case reports by county</span></li><li><span class="dot" ></span><span>Annual municipal tax revenue</span></li><li><span class="dot" ></span><span>Hourly electricity consumption</span></li></ul>
+    </div>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--teal);">⚙️ Key Requirement</h3>
+      <p style="margin-bottom:10px;">Data must be at <strong>regular, equal intervals</strong>. Without this, time-based operations like rolling averages break down.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+        <span style="background:var(--teal);color:white;padding:3px 11px;border-radius:12px;font-size:12px;font-weight:700;">Daily</span>
+        <span style="background:var(--teal);color:white;padding:3px 11px;border-radius:12px;font-size:12px;font-weight:700;">Weekly</span>
+        <span style="background:var(--teal);color:white;padding:3px 11px;border-radius:12px;font-size:12px;font-weight:700;">Monthly</span>
+        <span style="background:var(--teal);color:white;padding:3px 11px;border-radius:12px;font-size:12px;font-weight:700;">Quarterly</span>
+        <span style="background:var(--teal);color:white;padding:3px 11px;border-radius:12px;font-size:12px;font-weight:700;">Annual</span>
+      </div>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>So what exactly is time series data? Simply put, it is any dataset where we have recorded the same measurement repeatedly over time — at regular, equal intervals. Think monthly sales figures, weekly hospital admissions, or daily case counts.</p><p>The key word here is <strong>equally spaced</strong>. We need consistent intervals to detect patterns. Our course dataset — sales_data.csv — uses monthly sales observations. This is the file you will use for both Activity 1 and Activity 2 this week.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s4">
+  <span class="tag ">FOUNDATIONS</span>
+  <h1 class="slide-title">The DNA of a Time Series: Four Components</h1>
+  <div class="grid-4">
+    <div class="card"><div class="card-icon ci-navy" style="font-size:20px;font-weight:900;color:white;font-family:serif;">T</div><h3>Trend</h3><p>The long-term upward or downward direction in the data.</p></div>
+    <div class="card"><div class="card-icon ci-teal" style="font-size:20px;font-weight:900;color:white;font-family:serif;">S</div><h3>Seasonality</h3><p>Regular, repeating patterns (e.g., higher ER visits every winter).</p></div>
+    <div class="card"><div class="card-icon ci-amber" style="font-size:20px;font-weight:900;color:white;font-family:serif;">C</div><h3>Cyclical</h3><p>Long-term oscillations (often economic) without a fixed period.</p></div>
+    <div class="card"><div class="card-icon ci-slate" style="font-size:20px;font-weight:900;color:white;font-family:serif;">I</div><h3>Irregular</h3><p>Random "noise" or unpredictable black-swan events.</p></div>
+  </div>
+  <div class="formula-bar">Data = Trend + Seasonality + Cyclical + Irregular &nbsp;(Additive Model)</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Every time series you will ever encounter is made up of four building blocks — think of them as the DNA of your data. First, the <strong>Trend</strong> — is the overall direction going up, down, or flat over the long run? Second, <strong>Seasonality</strong> — are there patterns that repeat at the same time every year? Third, <strong>Cyclical</strong> movements — longer waves that follow economic or political cycles, without a fixed schedule. And fourth, <strong>Irregular</strong> variation — the unpredictable noise, the one-off events, the things no model can anticipate.</p><p>Our goal this week is to separate these components so we can see what is really driving the data.</p></div>
+  </div>
+</div>
+<div class="slide" id="s5">
+  <span class="tag ">TREND</span>
+  <h1 class="slide-title">Understanding Trend</h1>
+  <div class="grid-2">
+    <ul class="slide-list"><li><span class="dot" ></span><span>The long-term, sustained direction of a series</span></li><li><span class="dot" ></span><span><strong>Upward</strong> — consistent growth over years</span></li><li><span class="dot" ></span><span><strong>Downward</strong> — systematic decline over time</span></li><li><span class="dot" ></span><span><strong>Flat</strong> — stable, no meaningful direction</span></li><li><span class="dot" ></span><span>Can be linear or curved (non-linear)</span></li></ul>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">📈 Upward Trend (illustrative)</h3>
+      <div class="bar-chart" style="margin-top:10px;">
+        <div class="b" style="height:38%;background:var(--slate);opacity:.7;"></div>
+        <div class="b" style="height:48%;background:var(--slate);opacity:.7;"></div>
+        <div class="b" style="height:44%;background:var(--slate);opacity:.7;"></div>
+        <div class="b" style="height:60%;background:var(--slate);opacity:.7;"></div>
+        <div class="b" style="height:68%;background:var(--slate);opacity:.7;"></div>
+        <div class="b" style="height:76%;background:var(--slate);opacity:.7;"></div>
+        <div class="b" style="height:92%;background:var(--teal);"></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px;">Each period generally higher than the last = upward trend</p>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Trend is the big picture — if you zoom out and look at your data across years, is it drifting upward, downward, or holding steady? That drift is the trend.</p><p>Data bounces up and down from month to month — that is noise. A trend is what you see when you step back and squint. The 12-month moving average is the best visual tool to reveal the trend by smoothing out the monthly noise. In Activity 2, you will extract exactly this from your sales_data.csv file.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s6">
+  <span class="tag ">SEASONALITY</span>
+  <h1 class="slide-title">Seasonality: Patterns That Repeat</h1>
+  <div class="grid-2">
+    <div>
+      <h2 class="slide-subtitle">Key Traits</h2>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Repeats on a fixed, known period</span></li><li><span class="dot" ></span><span>Predictable once identified</span></li><li><span class="dot" ></span><span>Can be additive or multiplicative</span></li><li><span class="dot" ></span><span>Most actionable pattern for planning</span></li></ul>
+    </div>
+    <div>
+      <h2 class="slide-subtitle">Sector Examples</h2>
+      <div class="card" style="margin-bottom:8px;"><p>🛍️ <strong>Retail:</strong> Sales peak in November–December (holiday season)</p></div>
+      <div class="card" style="margin-bottom:8px;"><p>🏥 <strong>Healthcare:</strong> ER admissions surge every winter (flu season)</p></div>
+      <div class="card"><p>🏛️ <strong>Government:</strong> Budget requests and tax revenue spike quarterly</p></div>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Seasonality is the pattern that comes back reliably, like clockwork. Retail sales spike every November and December — that is seasonal. ER visits peak every winter as flu season hits — seasonal. Tax filing deadlines cause workload spikes every April — seasonal.</p><p>What makes seasonality powerful is that it is <strong>predictable</strong>. Once you have identified the seasonal pattern, you can plan for it. You can staff up in advance. You can order inventory early. You can budget for the surge before it arrives. This is where forecasting directly drives operational decisions.</p></div>
+  </div>
+</div>
+<div class="slide" id="s7">
+  <span class="tag ">COMPONENTS</span>
+  <h1 class="slide-title">Cyclical Patterns &amp; Irregular Variations</h1>
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">🔄 Cyclical Variation</h3>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Waves lasting 2–10+ years</span></li><li><span class="dot" ></span><span>Tied to economic or political cycles</span></li><li><span class="dot" ></span><span>No fixed, predictable period</span></li><li><span class="dot" ></span><span>Example: GDP contractions, housing cycles</span></li></ul>
+    </div>
+    <div class="card red-bg">
+      <h3 style="text-align:left;color:var(--red);">⚡ Irregular / Random</h3>
+      <ul class="slide-list"><li><span class="dot" style="background:var(--red);"></span><span>Cannot be predicted or modeled</span></li><li><span class="dot" style="background:var(--red);"></span><span>'Black swan' events: pandemic, natural disaster</span></li><li><span class="dot" style="background:var(--red);"></span><span>Creates residual after removing T, S, C</span></li><li><span class="dot" style="background:var(--red);"></span><span>Example: COVID-19 impact on patient volumes</span></li></ul>
+    </div>
+  </div>
+  <div class="formula-bar"><span style="color:var(--teal);">Goal: Model T + S + C accurately → what remains is the Irregular residual</span></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>The third component is <strong>cyclical variation</strong> — longer waves that follow economic or political cycles. Think of a recession: business slows down, revenues dip, and then they recover. That pattern might unfold over three to seven years. Unlike seasonality, cyclical patterns do not have a fixed schedule.</p><p>The fourth component is <strong>irregular variation</strong> — the true wild cards. The pandemic. An unexpected natural disaster. A one-time regulatory change. These cannot be modeled. What we do instead is model everything else well, and treat what remains as the irregular residual. That residual tells us how much of our data we still cannot explain.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s8">
+  <span class="tag ">FOUNDATIONS</span>
+  <h1 class="slide-title">Stationarity: A Critical Requirement</h1>
+  <div class="grid-2">
+    <div class="card green-bg">
+      <h3 style="text-align:left;color:var(--green);">✅ Stationary Series</h3>
+      <ul class="slide-list"><li><span class="dot" style="background:var(--green);"></span><span>Constant mean over time</span></li><li><span class="dot" style="background:var(--green);"></span><span>Constant variance</span></li><li><span class="dot" style="background:var(--green);"></span><span>Required for ARIMA models</span></li></ul>
+    </div>
+    <div class="card red-bg">
+      <h3 style="text-align:left;color:var(--red);">❌ Non-Stationary Series</h3>
+      <ul class="slide-list"><li><span class="dot" style="background:var(--red);"></span><span>Mean drifts upward or downward</span></li><li><span class="dot" style="background:var(--red);"></span><span>Variance may grow over time</span></li><li><span class="dot" style="background:var(--red);"></span><span>Must be transformed before ARIMA</span></li></ul>
+    </div>
+  </div>
+  <div class="highlight-box"><strong style="color:var(--teal);">Fix: Differencing</strong> — subtract each observation from the previous one. This removes the trend and makes most business series stationary.<br><br><code style="font-size:13px;color:var(--navy);">df['diff1'] = df['Sales'].diff()</code></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Before we can apply advanced forecasting models like ARIMA, we need to talk about stationarity. A stationary time series is one where the statistical properties — the mean and variance — stay constant over time. It does not trend upward or downward, and it does not become more or less volatile as time passes.</p><p>Most real-world business data is non-stationary, and that is fine. We just need to transform it first. The most common technique is <strong>differencing</strong> — we subtract each observation from the previous one, which removes the trend and stabilizes the mean. We cover the formal test for this — the ADF test — on slide 22.</p></div>
+  </div>
+</div>
+<div class="slide" id="s9">
+  <span class="tag ">DECOMPOSITION</span>
+  <h1 class="slide-title">Additive vs. Multiplicative Models</h1>
+  <table class="slide-table"><thead><tr><th>Feature</th><th>Additive</th><th>Multiplicative</th></tr></thead><tbody><tr><td>Formula</td><td>Y = T + S + C + I</td><td>Y = T × S × C × I</td></tr><tr><td>When to use</td><td>Seasonal swings are constant in size</td><td>Seasonal swings grow with the trend</td></tr><tr><td>Example</td><td>Sales vary by ±$10K every December</td><td>Sales vary by ±10% every December</td></tr><tr><td>Transformation</td><td>None needed</td><td>Log-transform to make additive</td></tr></tbody></table>
+  <div class="foot-note">Rule of thumb: if seasonal peaks grow taller as the trend rises → use Multiplicative.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Once we know that a time series has multiple components, we have to decide how those components combine. The <strong>Additive model</strong> says: the total value equals the sum of all components. Use this when the seasonal swings are constant in size — sales always go up by about ten thousand dollars in December, regardless of how high the trend is.</p><p>The <strong>Multiplicative model</strong> says the components multiply together. Use this when the seasonal swings grow as the trend grows — sales always spike by ten percent in December, so a bigger trend means a bigger absolute swing. When in doubt, plot your data. If the seasonal peaks and troughs are getting taller as the series grows, you need the multiplicative model.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s10">
+  <span class="tag ">VISUALIZATION</span>
+  <h1 class="slide-title">Step 1: Always Visualize First</h1>
+  <div class="quote-box">"A picture of your data reveals patterns that statistics alone will hide. Before you model — plot."</div>
+  <div class="grid-4">
+    <div class="card"><div class="step-num" style="margin:0 auto 9px;">1</div><h3>Line Plot</h3><p>Raw series over time — spot trend, outliers, data gaps</p></div>
+    <div class="card"><div class="step-num" style="margin:0 auto 9px;">2</div><h3>Seasonal Subseries</h3><p>Same month across years — confirm seasonality</p></div>
+    <div class="card"><div class="step-num" style="margin:0 auto 9px;">3</div><h3>ACF / Lag Plot</h3><p>Detect autocorrelation cycles and repeating patterns</p></div>
+    <div class="card"><div class="step-num" style="margin:0 auto 9px;">4</div><h3>Decomposition</h3><p>Separate T, S, C, I visually in one chart</p></div>
+  </div>
+  <button class="expand-btn" onclick="toggleDetail(this)"><span>Basic line plot code</span><span class="arrow">▼</span></button>
+  <div class="detail-panel"><pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+df = pd.<span class="fn">read_csv</span>(<span class="st">'sales_data.csv'</span>, parse_dates=[<span class="st">'Date'</span>], index_col=<span class="st">'Date'</span>)
+df[<span class="st">'Sales'</span>].<span class="fn">plot</span>(title=<span class="st">'Monthly Sales Over Time'</span>, figsize=(<span class="num">12</span>,<span class="num">5</span>))
+plt.<span class="fn">xlabel</span>(<span class="st">'Date'</span>); plt.<span class="fn">ylabel</span>(<span class="st">'Sales'</span>); plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Before you write a single line of forecasting code, always visualize your data first. This is the most important habit I want you to build. A line plot of your raw series will immediately show you whether there is a trend, whether there are obvious seasonal spikes, and whether there are any outliers or data gaps you need to handle.</p><p>I cannot count the number of analysts who jumped straight into building models and missed something obvious that a ten-second chart would have revealed. Plot first. Always.</p></div>
+  </div>
+</div>
+<div class="slide" id="s11">
+  <span class="tag ">PYTHON</span>
+  <h1 class="slide-title">Setting Up Your Python Environment</h1>
+  <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+<span class="kw">import</span> seaborn <span class="kw">as</span> sns
+<span class="kw">from</span> statsmodels.tsa.seasonal <span class="kw">import</span> seasonal_decompose
+<span class="kw">from</span> statsmodels.tsa.stattools <span class="kw">import</span> adfuller
+<span class="kw">from</span> statsmodels.tsa.holtwinters <span class="kw">import</span> ExponentialSmoothing
+<span class="kw">from</span> statsmodels.tsa.arima.model <span class="kw">import</span> ARIMA
+
+<span class="cm"># Load your data — always parse_dates!</span>
+df = pd.<span class="fn">read_csv</span>(<span class="st">'sales_data.csv'</span>, parse_dates=[<span class="st">'Date'</span>], index_col=<span class="st">'Date'</span>)
+<span class="fn">print</span>(df.index.dtype)  <span class="cm"># Should show: datetime64[ns]</span>
+df.<span class="fn">head</span>()</pre>
+  <ul class="slide-list"><li><span class="dot" ></span><span><strong>pandas</strong> — data loading, date indexing, rolling calculations</span></li><li><span class="dot" ></span><span><strong>matplotlib / seaborn</strong> — plotting and visualization</span></li><li><span class="dot" ></span><span><strong>statsmodels</strong> — decomposition, ARIMA, Exponential Smoothing</span></li></ul>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Here is everything you need to import to get through this week's work. You already know pandas and matplotlib from earlier modules. The new library this week is <strong>statsmodels</strong> — this is the workhorse for time series in Python. It gives us seasonal decomposition, the Augmented Dickey-Fuller test for stationarity, Exponential Smoothing, and ARIMA.</p><p>Notice we are using <code>parse_dates</code> and <code>index_col</code> when loading the CSV — this tells pandas to treat the Date column as a proper datetime index. Without it, your plots will show numbers instead of dates, and rolling calculations will fail. Always verify with <code>df.index.dtype</code> — it should show <code>datetime64[ns]</code>.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s12">
+  <span class="tag ">PYTHON</span>
+  <h1 class="slide-title">Plotting Your Time Series — Activity 2, Q1</h1>
+  <div class="quote-box">Activity 2 Q1 asks you to plot Sales over time and describe any visible patterns. The chart is easy — the written description is where the grade is.</div>
+  <h2 class="slide-subtitle">What to look for in your chart:</h2>
+  <ul class="slide-list"><li><span class="dot" ></span><span>Is the series going <strong>up, down, or flat</strong> over time? That is the trend.</span></li><li><span class="dot" ></span><span>Are there <strong>regular spikes or dips</strong> at the same time each year? That is seasonality.</span></li><li><span class="dot" ></span><span>Are there <strong>sudden drops or jumps</strong> that don't fit the pattern? Those are irregular events.</span></li></ul>
+  <button class="expand-btn" onclick="toggleDetail(this)"><span>Sample written answer for Q1</span><span class="arrow">▼</span></button>
+  <div class="detail-panel"><h4>Example Q1 Description</h4><p style="font-size:14px;">"The sales series shows a <strong>clear upward trend</strong> over the observation period, with sales growing from approximately 100 units at the start to over 180 units by the end. There is also a visible <strong>seasonal pattern</strong> — sales appear to peak mid-year in a regular, repeating cycle. A few isolated spikes may represent irregular events or data anomalies."</p></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Take a moment and look at your plot. What do you see? First — is there an overall trend? Second — do you see any repeating dips or peaks that seem to happen regularly? Third — are there any sudden, unexpected jumps or drops?</p><p>Write two or three sentences that answer those three questions. Do not just say 'I see a trend.' Say <em>what kind</em> of trend, <em>which direction</em> it is heading, and approximately how large the change is over the observation period.</p></div>
+  </div>
+</div><div class="slide" id="s13">
+  <span class="tag ">TREND ANALYSIS</span>
+  <h1 class="slide-title">Moving Average: Smoothing the Noise</h1>
+  <div class="formula-bar">MA(k) = (Y<sub>t</sub> + Y<sub>t-1</sub> + ... + Y<sub>t-k+1</sub>) / k</div>
+  <div class="grid-2">
+    <ul class="slide-list"><li><span class="dot" ></span><span>k = window size (use <strong>12</strong> for monthly data)</span></li><li><span class="dot" ></span><span>Each point = average of the surrounding k values</span></li><li><span class="dot" ></span><span>Removes short-term fluctuations to reveal the trend</span></li><li><span class="dot" ></span><span>Larger k = smoother line, but loses more data endpoints</span></li></ul>
+    <div class="card green-bg">
+      <h3 style="text-align:left;color:var(--green);">🎯 Interpretation Guide</h3>
+      <p>📈 Rising smoothed line → upward trend</p>
+      <p style="margin-top:7px;">➡️ Flat smoothed line → trend leveling off</p>
+      <p style="margin-top:7px;">📉 Falling smoothed line → downward trend</p>
+    </div>
+  </div>
+  <button class="expand-btn" onclick="toggleDetail(this)"><span>Python code + why k=12</span><span class="arrow">▼</span></button>
+  <div class="detail-panel"><pre>df[<span class="st">'MA12'</span>] = df[<span class="st">'Sales'</span>].<span class="fn">rolling</span>(<span class="num">12</span>).<span class="fn">mean</span>()
+
+df[[<span class="st">'Sales'</span>, <span class="st">'MA12'</span>]].<span class="fn">plot</span>(figsize=(<span class="num">12</span>,<span class="num">5</span>))
+plt.<span class="fn">title</span>(<span class="st">'Sales with 12-Month Moving Average'</span>)
+plt.<span class="fn">legend</span>([<span class="st">'Original'</span>, <span class="st">'12-Month MA'</span>])
+plt.<span class="fn">show</span>()</pre><p style="font-size:14px;margin-top:8px;">Averaging exactly 12 consecutive months covers one full year. Every seasonal peak and trough gets included exactly once — so they cancel out. What remains is the pure underlying trend, free of seasonal distortion.</p></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>The Moving Average is our first tool for isolating the trend. Instead of plotting the raw sales for each month — which includes all that seasonal noise — we replace each data point with the average of the surrounding twelve months. That smooths out all the peaks and valleys that repeat each year, leaving us with just the underlying direction.</p><p>Why twelve? Because we have monthly data, and averaging twelve consecutive months covers exactly one full year — so every seasonal peak and trough gets averaged in exactly once, and they cancel each other out. Activity 2 Question 2 asks you to plot both on the same chart and describe what the smoothed line reveals that the raw series hides.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s14">
+  <span class="tag ">TREND ANALYSIS</span>
+  <h1 class="slide-title">Linear Regression: Quantifying the Trend</h1>
+  <div class="formula-bar">Sales = β₀ + β₁ × Time + ε</div>
+  <ul class="slide-list"><li><span class="dot" ></span><span><strong>β₀</strong> = intercept (starting value when time = 0)</span></li><li><span class="dot" ></span><span><strong>β₁</strong> = slope (average change per time period)</span></li><li><span class="dot" ></span><span><strong>ε</strong> = residual error (what the model doesn't explain)</span></li><li><span class="dot" ></span><span>If β₁ = 2.5 → sales grow by $2,500 per month on average</span></li><li><span class="dot" ></span><span>Positive slope = upward trend; Negative slope = downward trend</span></li></ul>
+  <button class="expand-btn" onclick="toggleDetail(this)"><span>Python code for regression trend</span><span class="arrow">▼</span></button>
+  <div class="detail-panel"><pre><span class="kw">from</span> sklearn.linear_model <span class="kw">import</span> LinearRegression
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+df[<span class="st">'time_idx'</span>] = np.<span class="fn">arange</span>(<span class="fn">len</span>(df))
+X = df[[<span class="st">'time_idx'</span>]]
+y = df[<span class="st">'Sales'</span>]
+
+model = LinearRegression().<span class="fn">fit</span>(X, y)
+slope = model.coef_[<span class="num">0</span>]
+<span class="fn">print</span>(<span class="st">f"Slope: {{slope:.3f}} units/month"</span>)
+
+df[<span class="st">'trend_line'</span>] = model.<span class="fn">predict</span>(X)
+df[[<span class="st">'Sales'</span>, <span class="st">'trend_line'</span>]].<span class="fn">plot</span>()</pre></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>The second trend technique is linear regression. Where the moving average shows you the trend visually by smoothing the line, regression gives you a precise number — the slope.</p><p>The slope tells you, on average, how much sales change for every one unit increase in time. If the slope is 2.5, that means sales grow by about two thousand five hundred dollars every single month, on average. That is a powerful, concrete statement for a manager to make to a leadership team. Activity 2 Question 3 asks you to report the slope and interpret it in plain English — not just as a bare number.</p></div>
+  </div>
+</div>
+<div class="slide" id="s15">
+  <span class="tag ">TREND ANALYSIS</span>
+  <h1 class="slide-title">Moving Average vs. Regression — Activity 2, Q4</h1>
+  <table class="slide-table"><thead><tr><th>Criterion</th><th>Moving Average</th><th>Linear Regression</th></tr></thead><tbody><tr><td>Output</td><td>Smoothed line (variable shape)</td><td>Straight line (fixed slope)</td></tr><tr><td>Handles non-linearity?</td><td>Yes — follows curves</td><td>No — assumes straight line</td></tr><tr><td>Loses data?</td><td>Yes — first k-1 points missing</td><td>No — full series used</td></tr><tr><td>Gives a number?</td><td>No</td><td>Yes — slope with p-value</td></tr><tr><td>Best for…</td><td>Visualization &amp; exploration</td><td>Reporting &amp; hypothesis testing</td></tr></tbody></table>
+  <div class="highlight-box"><strong>Use both:</strong> MA to see the shape of the trend, Regression to quantify and test it. They are complementary, not competing.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Activity 2 Question 4 asks you to compare these two methods. Here is the key insight: they are not competing tools — they are complementary. The moving average is your <strong>visual tool</strong>. It shows you the shape of the trend. Is it curving? Is it leveling off? Is there a kink somewhere where growth accelerated?</p><p>The regression line is your <strong>reporting tool</strong>. It gives you a single, precise number — the slope — that you can present to a board, a committee, or a grant reviewer. In practice, professionals use both. Use the moving average to explore and communicate the pattern, then use regression to quantify and test it.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s16">
+  <span class="tag ">DECOMPOSITION</span>
+  <h1 class="slide-title">Seasonal Decomposition with Python</h1>
+  <pre><span class="kw">from</span> statsmodels.tsa.seasonal <span class="kw">import</span> seasonal_decompose
+
+result = <span class="fn">seasonal_decompose</span>(df[<span class="st">'Sales'</span>], model=<span class="st">'additive'</span>, period=<span class="num">12</span>)
+result.<span class="fn">plot</span>()
+plt.<span class="fn">tight_layout</span>()
+plt.<span class="fn">show</span>()
+
+<span class="cm"># Access individual components</span>
+trend    = result.trend
+seasonal = result.seasonal
+residual = result.resid</pre>
+  <div class="grid-4">
+    <div class="card"><h3>Panel 1</h3><p><strong>Observed</strong> — your original raw data series</p></div>
+    <div class="card"><h3>Panel 2</h3><p><strong>Trend</strong> — smooth long-run direction</p></div>
+    <div class="card"><h3>Panel 3</h3><p><strong>Seasonal</strong> — the repeating annual pattern</p></div>
+    <div class="card"><h3>Panel 4</h3><p><strong>Residual</strong> — what remains after T + S are removed</p></div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Python's statsmodels library gives us a one-function shortcut for decomposition. <code>seasonal_decompose</code> takes your series and the model type and automatically separates out the trend, seasonal, and residual components, giving you four stacked charts.</p><p>Panel four is the residual — the leftover noise. Ideally, it should look like white noise: random, no patterns. If you see patterns in the residual, it means your model did not fully capture all the structure in the data. That is your signal to try the multiplicative model or to check whether <code>period=12</code> is correct.</p></div>
+  </div>
+</div>
+<div class="slide" id="s17">
+  <span class="tag ">FORECASTING</span>
+  <h1 class="slide-title">Exponential Smoothing: Weight Recent Data More</h1>
+  <div class="formula-bar">S<sub>t</sub> = α × Y<sub>t</sub> + (1 – α) × S<sub>t-1</sub></div>
+  <div class="grid-2">
+    <ul class="slide-list"><li><span class="dot" ></span><span>α (alpha) = smoothing parameter, 0 &lt; α &lt; 1</span></li><li><span class="dot" ></span><span><strong>High α</strong> → reacts quickly to recent changes (volatile data)</span></li><li><span class="dot" ></span><span><strong>Low α</strong> → stable, weights history more (smooth data)</span></li><li><span class="dot" ></span><span>More realistic than MA: recent data matters more than old data</span></li></ul>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">Three Versions</h3>
+      <p>📌 <strong>SES</strong> — Simple: no trend, no seasonality</p>
+      <p style="margin-top:9px;">📌 <strong>Holt</strong> — Double: captures trend only</p>
+      <p style="margin-top:9px;">📌 <strong>Holt-Winters</strong> — Triple: trend + seasonality <em>(use this for our data!)</em></p>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>The moving average treats all twelve months in its window equally. But think about that — should sales from two years ago have the same influence on next month's forecast as last month's actual sales? Probably not.</p><p>Exponential smoothing assigns weights that decay exponentially as observations get older. The most recent observation gets the highest weight, and the influence fades as you go back in time. For your sales data, which has both trend and seasonality, you will use the <strong>Holt-Winters model</strong> — also called Triple Exponential Smoothing. It is purpose-built for data like ours.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s18">
+  <span class="tag ">FORECASTING</span>
+  <h1 class="slide-title">Holt-Winters in Python</h1>
+  <pre><span class="kw">from</span> statsmodels.tsa.holtwinters <span class="kw">import</span> ExponentialSmoothing
+
+<span class="cm"># Split: reserve last 12 months for testing</span>
+train = df.iloc[:<span class="num">-12</span>]
+test  = df.iloc[<span class="num">-12</span>:]
+
+model = <span class="fn">ExponentialSmoothing</span>(
+    train[<span class="st">'Sales'</span>],
+    trend=<span class="st">'add'</span>,
+    seasonal=<span class="st">'add'</span>,
+    seasonal_periods=<span class="num">12</span>
+).<span class="fn">fit</span>()
+
+forecast = model.<span class="fn">forecast</span>(<span class="num">12</span>)
+
+plt.<span class="fn">plot</span>(train[<span class="st">'Sales'</span>], label=<span class="st">'Training'</span>)
+plt.<span class="fn">plot</span>(test[<span class="st">'Sales'</span>],  label=<span class="st">'Actual'</span>)
+plt.<span class="fn">plot</span>(forecast,       label=<span class="st">'Forecast'</span>)
+plt.<span class="fn">legend</span>(); plt.<span class="fn">show</span>()</pre>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Two things I want you to notice. First, we <strong>split the data</strong> into a training set and a test set. We train on everything except the last twelve months, then we forecast those twelve months and compare to what actually happened. This is how you evaluate a forecasting model — you test it on data it has never seen.</p><p>Second, notice <code>seasonal_periods=12</code>. This tells the model that one complete seasonal cycle is twelve months. The model then learns the seasonal pattern and the trend simultaneously, and combines them to project forward. This one function does a lot of heavy lifting.</p></div>
+  </div>
+</div>
+<div class="slide" id="s19">
+  <span class="tag ">ARIMA</span>
+  <h1 class="slide-title">ARIMA: The Industry Standard</h1>
+  <div class="formula-bar">ARIMA = AutoRegressive + Integrated + Moving Average</div>
+  <div class="grid-3">
+    <div class="card"><div style="background:var(--navy);color:white;padding:8px;border-radius:6px;text-align:center;font-weight:700;font-size:19px;margin-bottom:10px;">AR(p)</div><h3>AutoRegressive</h3><p>Uses <em>p</em> past values as predictors. Last month's sales help predict this month's.</p></div>
+    <div class="card"><div style="background:var(--teal);color:white;padding:8px;border-radius:6px;text-align:center;font-weight:700;font-size:19px;margin-bottom:10px;">I(d)</div><h3>Integrated</h3><p>Differences the series <em>d</em> times to achieve stationarity. d=1 removes a linear trend.</p></div>
+    <div class="card"><div style="background:var(--amber);color:white;padding:8px;border-radius:6px;text-align:center;font-weight:700;font-size:19px;margin-bottom:10px;">MA(q)</div><h3>Moving Average</h3><p>Uses <em>q</em> past forecast errors as predictors. The model learns from its own mistakes.</p></div>
+  </div>
+  <div class="foot-note">ARIMA(p,d,q) — choose parameters using ACF/PACF plots, or use auto_arima to search automatically</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>ARIMA is the industry-standard forecasting model. ARIMA stands for AutoRegressive Integrated Moving Average. The <strong>AR part</strong> uses past values of the series to predict the future — last month's sales help predict this month's. The <strong>I part</strong> applies differencing to make the series stationary. The <strong>MA part</strong> uses past forecast errors as predictors — it learns from its own mistakes.</p><p>These three components are controlled by three parameters: <strong>p</strong> for the AR order, <strong>d</strong> for how many times we difference, and <strong>q</strong> for the MA order. Choosing those parameters is the main skill — and we cover that on the next slide.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s20">
+  <span class="tag ">ARIMA</span>
+  <h1 class="slide-title">Choosing ARIMA Parameters (p, d, q)</h1>
+  <div class="grid-3">
+    <div class="card"><h3 style="text-align:left;">p — AR Order</h3><ul class="slide-list"><li><span class="dot" ></span><span>Check PACF plot</span></li><li><span class="dot" ></span><span>Count spikes before cutoff</span></li><li><span class="dot" ></span><span>PACF cuts at lag 2 → p=2</span></li></ul></div>
+    <div class="card"><h3 style="text-align:left;">d — Differencing</h3><ul class="slide-list"><li><span class="dot" ></span><span>Run ADF test first</span></li><li><span class="dot" ></span><span>Non-stationary → d=1</span></li><li><span class="dot" ></span><span>Rarely need d &gt; 2</span></li></ul></div>
+    <div class="card"><h3 style="text-align:left;">q — MA Order</h3><ul class="slide-list"><li><span class="dot" ></span><span>Check ACF plot</span></li><li><span class="dot" ></span><span>Count spikes before cutoff</span></li><li><span class="dot" ></span><span>ACF cuts at lag 1 → q=1</span></li></ul></div>
+  </div>
+  <div class="highlight-box">💡 <strong>Quick start:</strong> Try <code>ARIMA(1,1,1)</code> as your baseline — one round of differencing, one AR lag, one MA correction. Reliable for most business time series.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Selecting p, d, and q is where many students get stuck, so let me give you a practical workflow. Start with <strong>d</strong>: run the Augmented Dickey-Fuller test. If the series is non-stationary, set d equal to one. Then look at your <strong>PACF plot</strong> to choose p — count how many significant spikes appear before the plot cuts off to near zero. Do the same with the <strong>ACF plot</strong> for q.</p><p>If you just want to get started, try ARIMA(1,1,1) as your baseline. It handles simple trends and is a reasonable starting point for most business time series. Tune from there after seeing your accuracy metrics.</p></div>
+  </div>
+</div>
+<div class="slide" id="s21">
+  <span class="tag ">ARIMA</span>
+  <h1 class="slide-title">SARIMA: Adding the Seasonal Layer</h1>
+  <div class="formula-bar">SARIMA(p,d,q)(P,D,Q,m)</div>
+  <div class="grid-2">
+    <div class="card"><h3 style="text-align:left;color:var(--navy);">Non-Seasonal (p,d,q)</h3><ul class="slide-list"><li><span class="dot" ></span><span>p — AR order (lags of the series)</span></li><li><span class="dot" ></span><span>d — Differencing order</span></li><li><span class="dot" ></span><span>q — MA order (lags of forecast errors)</span></li></ul></div>
+    <div class="card"><h3 style="text-align:left;color:var(--teal);">Seasonal (P,D,Q,m)</h3><ul class="slide-list"><li><span class="dot" style="background:var(--teal);"></span><span>P — Seasonal AR order</span></li><li><span class="dot" style="background:var(--teal);"></span><span>D — Seasonal differencing (usually 1)</span></li><li><span class="dot" style="background:var(--teal);"></span><span>Q — Seasonal MA order</span></li><li><span class="dot" style="background:var(--teal);"></span><span>m — Period (12 for monthly data)</span></li></ul></div>
+  </div>
+  <div class="highlight-box">For monthly sales with seasonality → start with <strong>SARIMA(1,1,1)(1,1,0,12)</strong></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>When your data has both trend and seasonality, we extend ARIMA to SARIMA. SARIMA has a second set of parameters in parentheses that handle the seasonal component separately. The capital P, D, Q work exactly like their lowercase counterparts, but they operate at the seasonal lag — instead of looking at the previous month, they look at the same month last year.</p><p>For monthly data, m equals twelve. Start with a reasonable baseline like SARIMA(1,1,1)(1,1,0,12) and tune from there using AIC scores.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s22">
+  <span class="tag ">STATIONARITY</span>
+  <h1 class="slide-title">Testing for Stationarity: The ADF Test</h1>
+  <pre><span class="kw">from</span> statsmodels.tsa.stattools <span class="kw">import</span> adfuller
+
+result = <span class="fn">adfuller</span>(df[<span class="st">'Sales'</span>])
+<span class="fn">print</span>(<span class="st">f"ADF Statistic: {{result[0]:.4f}}"</span>)
+<span class="fn">print</span>(<span class="st">f"p-value:       {{result[1]:.4f}}"</span>)
+
+<span class="kw">if</span> result[<span class="num">1</span>] &lt; <span class="num">0.05</span>:
+    <span class="fn">print</span>(<span class="st">"STATIONARY — ready for ARIMA."</span>)
+<span class="kw">else</span>:
+    <span class="fn">print</span>(<span class="st">"NON-STATIONARY — apply differencing and re-test."</span>)</pre>
+  <div class="grid-2">
+    <div class="card green-bg"><p>✅ <strong>p &lt; 0.05</strong> → Reject H₀ → Series is stationary → proceed to ARIMA</p></div>
+    <div class="card amber-bg"><p>⚠️ <strong>p ≥ 0.05</strong> → Fail to reject H₀ → Apply differencing, then re-test</p></div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Before fitting any ARIMA model, always run the Augmented Dickey-Fuller test. The null hypothesis is that the series is non-stationary. If p &lt; 0.05, we reject the null and conclude the series is stationary — proceed to ARIMA. If p ≥ 0.05, the series is non-stationary, and we need to difference it.</p><p>Difference the data, run the ADF test again, and repeat until the series is stationary. For most business data with a linear trend, one round of differencing — setting d equal to one — is usually enough.</p></div>
+  </div>
+</div>
+<div class="slide" id="s23">
+  <span class="tag ">EVALUATION</span>
+  <h1 class="slide-title">How Do We Know If Our Forecast Is Good?</h1>
+  <div class="grid-3">
+    <div class="card"><div style="background:var(--navy);color:white;padding:8px;border-radius:6px;text-align:center;font-weight:700;font-size:20px;margin-bottom:10px;">MAE</div><h3>Mean Absolute Error</h3><p style="font-family:monospace;font-size:12px;margin-bottom:8px;">avg(|Actual − Forecast|)</p><p style="color:var(--green);font-size:13px;">✓ Easy to interpret (same units)</p><p style="color:var(--red);font-size:13px;margin-top:4px;">✗ Treats all errors equally</p></div>
+    <div class="card"><div style="background:var(--teal);color:white;padding:8px;border-radius:6px;text-align:center;font-weight:700;font-size:20px;margin-bottom:10px;">RMSE</div><h3>Root Mean Square Error</h3><p style="font-family:monospace;font-size:12px;margin-bottom:8px;">√avg((Actual − Forecast)²)</p><p style="color:var(--green);font-size:13px;">✓ Penalizes large errors more</p><p style="color:var(--red);font-size:13px;margin-top:4px;">✗ Sensitive to outliers</p></div>
+    <div class="card"><div style="background:var(--amber);color:white;padding:8px;border-radius:6px;text-align:center;font-weight:700;font-size:20px;margin-bottom:10px;">MAPE</div><h3>Mean Absolute % Error</h3><p style="font-family:monospace;font-size:12px;margin-bottom:8px;">avg(|Error| / |Actual|) × 100</p><p style="color:var(--green);font-size:13px;">✓ Scale-free, comparable</p><p style="color:var(--red);font-size:13px;margin-top:4px;">✗ Undefined if actual = 0</p></div>
+  </div>
+  <div class="foot-note">Lower is better for all three. Use MAPE when comparing models across products or scales.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Building a forecast is only half the job. The other half is knowing whether it is accurate enough to trust. <strong>MAE</strong> is the average absolute difference between our forecast and reality — easy to explain to a non-technical audience. <strong>RMSE</strong> squares the errors before averaging, which means large errors get penalized much more heavily. <strong>MAPE</strong> expresses accuracy as a percentage — great for comparing across different products or scales.</p><p>A MAPE below ten percent is generally considered excellent for business forecasting. But always interpret in context — for extremely volatile data, twenty percent might actually be quite good. When you report your model accuracy, always include the metric AND interpret what it means for the decisions being made.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s24">
+  <span class="tag ">EVALUATION</span>
+  <h1 class="slide-title">Calculating Forecast Accuracy in Python</h1>
+  <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+
+actual        = test[<span class="st">'Sales'</span>].values
+forecast_vals = model.<span class="fn">forecast</span>(<span class="num">12</span>).values
+
+MAE  = np.<span class="fn">mean</span>(np.<span class="fn">abs</span>(actual - forecast_vals))
+RMSE = np.<span class="fn">sqrt</span>(np.<span class="fn">mean</span>((actual - forecast_vals)**<span class="num">2</span>))
+MAPE = np.<span class="fn">mean</span>(np.<span class="fn">abs</span>((actual - forecast_vals) / actual)) * <span class="num">100</span>
+
+<span class="fn">print</span>(<span class="st">f"MAE:  {{MAE:.2f}}"</span>)
+<span class="fn">print</span>(<span class="st">f"RMSE: {{RMSE:.2f}}"</span>)
+<span class="fn">print</span>(<span class="st">f"MAPE: {{MAPE:.2f}}%"</span>)</pre>
+  <div class="mape-chips">
+    <span class="mape-chip" style="background:var(--green);">MAPE &lt;10% = Excellent</span>
+    <span class="mape-chip" style="background:var(--teal);">10–20% = Good</span>
+    <span class="mape-chip" style="background:var(--amber);">20–50% = Acceptable</span>
+    <span class="mape-chip" style="background:var(--red);">&gt;50% = Poor — revisit model</span>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Here is how you calculate all three metrics with just a few lines of NumPy. The key is that you compare your forecast values against the actual test values — the data you held out before fitting.</p><p>Remember: these benchmarks are rules of thumb. When you report your model accuracy, always say what the number means in context. 'MAPE of 7.3%' alone is meaningless to most managers. 'Our forecast is off by less than 8% on average' is something they can act on.</p></div>
+  </div>
+</div>
+<div class="slide" id="s25">
+  <span class="tag ">LIMITATIONS</span>
+  <h1 class="slide-title">Limitations of MA &amp; Regression — Activity 2, Q5</h1>
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">Moving Average</h3>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Loses k-1 data points at the start of the series</span></li><li><span class="dot" ></span><span>Cannot forecast future values directly</span></li><li><span class="dot" ></span><span>Does not model seasonality</span></li><li><span class="dot" ></span><span>Reacts to trend changes with a lag</span></li></ul>
+    </div>
+    <div class="card red-bg">
+      <h3 style="text-align:left;color:var(--navy);">Linear Regression</h3>
+      <ul class="slide-list"><li><span class="dot" style="background:var(--red);"></span><span>Assumes straight-line trend (often wrong in reality)</span></li><li><span class="dot" style="background:var(--red);"></span><span>Sensitive to outliers distorting the slope</span></li><li><span class="dot" style="background:var(--red);"></span><span>Ignores autocorrelation between observations</span></li><li><span class="dot" style="background:var(--red);"></span><span>Cannot capture seasonal patterns alone</span></li></ul>
+    </div>
+  </div>
+  <div class="foot-note">These are exploratory tools — great for understanding data, but not the final forecasting step.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Activity 2 Question 5 asks you to discuss limitations — so let me build your answer here. For the moving average: it is inherently backward-looking and cannot project into the future. It loses data at the beginning because the first window is not complete. And it has no awareness of seasonal patterns.</p><p>For regression: the assumption of a straight-line trend is often wrong. More critically, regression assumes that observations are independent of each other — which is almost never true for time series. Each month's sales are correlated with the previous month. Violating this assumption means our confidence intervals and hypothesis tests are unreliable. These are exploration and communication tools — they set the stage for the more powerful models we build next.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s26">
+  <span class="tag ">WORKFLOW</span>
+  <h1 class="slide-title">The Complete Forecasting Workflow</h1>
+  <ol class="step-list"><li><span class="step-num">1</span><div><strong>Load &amp; Explore</strong> — Import data, set date index, plot raw series</div></li><li><span class="step-num">2</span><div><strong>Identify Components</strong> — Spot trend, seasonality, and outliers visually</div></li><li><span class="step-num">3</span><div><strong>Test Stationarity</strong> — Run ADF test; apply differencing if needed (d=1)</div></li><li><span class="step-num">4</span><div><strong>Decompose</strong> — Run seasonal_decompose to isolate Trend, Seasonal, Residual</div></li><li><span class="step-num">5</span><div><strong>Fit Models</strong> — Try Moving Average, Holt-Winters, ARIMA; compare AIC</div></li><li><span class="step-num">6</span><div><strong>Evaluate</strong> — Compute MAE, RMSE, MAPE on held-out test set only</div></li><li><span class="step-num">7</span><div><strong>Forecast &amp; Report</strong> — Generate future values; present with confidence intervals</div></li></ol>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Let me consolidate everything into a single, repeatable workflow you can use for any time series problem — not just this week's assignment, but in your careers. Step one: load and plot. Step two: identify components visually. Step three: test for stationarity. Step four: decompose. Step five: fit candidate models. Step six: evaluate on test data. Step seven: forecast and communicate with uncertainty.</p><p>Follow it every time. Do not skip steps. The steps that look like overhead — like testing for stationarity — are the ones that save you from presenting a model that violates its own assumptions.</p></div>
+  </div>
+</div>
+<div class="slide" id="s27">
+  <span class="tag navy">MBA TRACK</span>
+  <h1 class="slide-title">MBA Application: Sales &amp; Inventory Forecasting</h1>
+  <div class="quote-box">Case: Predict monthly product sales to optimize inventory and avoid costly stockouts.</div>
+  <div class="grid-3">
+    <div class="card"><h3 style="text-align:left;">❓ Business Question</h3><ul class="slide-list"><li><span class="dot" ></span><span>How much inventory do we order for Q4?</span></li><li><span class="dot" ></span><span>When does demand peak — Nov or Dec?</span></li><li><span class="dot" ></span><span>Is our growth rate accelerating or slowing?</span></li></ul></div>
+    <div class="card"><h3 style="text-align:left;">🔧 Approach</h3><ul class="slide-list"><li><span class="dot" ></span><span>Holt-Winters for trend + seasonal</span></li><li><span class="dot" ></span><span>SARIMA for precise seasonal modeling</span></li><li><span class="dot" ></span><span>Report slope: $/month growth rate</span></li></ul></div>
+    <div class="card green-bg"><h3 style="text-align:left;color:var(--green);">✅ Managerial Action</h3><ul class="slide-list"><li><span class="dot" style="background:var(--green);"></span><span>Order 20% more stock 6 weeks before peak</span></li><li><span class="dot" style="background:var(--green);"></span><span>Negotiate pre-season supplier contracts</span></li><li><span class="dot" style="background:var(--green);"></span><span>Tie inventory investment to forecasted revenue</span></li></ul></div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Suppose you manage the retail division of a consumer goods company. You have monthly sales data going back five years. Your purchasing team needs to know how much inventory to order for the fourth quarter — and they need that number eight weeks before the season starts, because of supplier lead times.</p><p>You apply Holt-Winters or SARIMA to your historical data, which captures the seasonal peak in November and December. The model tells you to expect a thirty-two percent sales increase in November compared to the annual average. You use that number to negotiate pre-season inventory commitments with your supplier at a volume discount. That is the direct business value of a good forecast.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s28">
+  <span class="tag amber">MHA TRACK</span>
+  <h1 class="slide-title">MHA Application: Patient Volume Forecasting</h1>
+  <div class="quote-box">Case: Forecast monthly ER admissions for proactive nurse staffing and resource planning.</div>
+  <div class="grid-2">
+    <div>
+      <h2 class="slide-subtitle">Seasonal ER Pattern (illustrative)</h2>
+      <div class="bar-chart">
+        <div class="b" style="height:88%;background:var(--teal);"></div>
+        <div class="b" style="height:80%;background:var(--teal);opacity:.85;"></div>
+        <div class="b" style="height:72%;background:var(--teal);opacity:.75;"></div>
+        <div class="b" style="height:55%;background:var(--teal);opacity:.65;"></div>
+        <div class="b" style="height:50%;background:var(--teal);opacity:.6;"></div>
+        <div class="b" style="height:43%;background:var(--teal);opacity:.55;"></div>
+        <div class="b" style="height:46%;background:var(--teal);opacity:.55;"></div>
+        <div class="b" style="height:45%;background:var(--teal);opacity:.6;"></div>
+        <div class="b" style="height:52%;background:var(--teal);opacity:.65;"></div>
+        <div class="b" style="height:62%;background:var(--teal);opacity:.75;"></div>
+        <div class="b" style="height:78%;background:var(--teal);opacity:.9;"></div>
+        <div class="b" style="height:92%;background:var(--teal);"></div>
+      </div>
+      <div class="bar-chart-labels"><span>Jan (peak)</span><span>Jun (low)</span><span>Dec (peak)</span></div>
+    </div>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">Staffing Implications</h3>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Forecast Jan–Feb surge 90 days out → recruit travel nurses in October</span></li><li><span class="dot" ></span><span>Reduce per diem staff in June–August (low season)</span></li><li><span class="dot" ></span><span>Tie on-call scheduling to seasonal index</span></li><li><span class="dot" ></span><span>Budget for winter supply increases in advance</span></li></ul>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>For the healthcare administrators — here is your scenario. ER admissions follow a strong seasonal pattern: they peak in winter due to flu and respiratory illness, and they drop in summer. If you can forecast that January will see thirty-two percent more admissions than August, you can alert your HR team in October to begin recruiting travel nurses for January.</p><p>The cost of over-staffing by ten percent is far lower than the cost of a dangerous nurse-to-patient ratio during a flu surge. This is where forecasting directly impacts patient safety — not just the budget.</p></div>
+  </div>
+</div>
+<div class="slide" id="s29">
+  <span class="tag ">MPA TRACK</span>
+  <h1 class="slide-title">MPA Application: Revenue &amp; Utility Demand Forecasting</h1>
+  <div class="quote-box">Case: Forecast annual tax revenue and utility demand for infrastructure budget planning.</div>
+  <div class="grid-2">
+    <div>
+      <h2 class="slide-subtitle">Revenue Trend (illustrative, $M)</h2>
+      <div class="bar-chart">
+        <div class="b" style="height:42%;background:var(--navy);"></div>
+        <div class="b" style="height:34%;background:var(--navy);opacity:.85;"></div>
+        <div class="b" style="height:44%;background:var(--navy);"></div>
+        <div class="b" style="height:56%;background:var(--navy);"></div>
+        <div class="b" style="height:62%;background:var(--navy);"></div>
+        <div class="b" style="height:67%;background:var(--navy);"></div>
+        <div class="b" style="height:76%;background:var(--amber);"></div>
+        <div class="b" style="height:85%;background:var(--amber);"></div>
+      </div>
+      <div class="bar-chart-labels"><span>2019</span><span>2022</span><span>2026F</span></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px;"><span style="color:var(--amber);font-weight:700;">■</span> Forecasted &nbsp; <span style="color:var(--navy);font-weight:700;">■</span> Actual</p>
+    </div>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">Policy Uses</h3>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Set realistic annual budget ceilings from revenue forecast</span></li><li><span class="dot" ></span><span>Time bond issuance when cash flow dips are predicted</span></li><li><span class="dot" ></span><span>Plan infrastructure before demand outstrips capacity</span></li><li><span class="dot" ></span><span>Justify staffing requests to elected officials with data</span></li></ul>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>For the public administrators — your application is equally high-stakes. Municipal governments are required by law to pass balanced budgets. Overestimate revenue and you face mid-year cuts to essential services. Underestimate and you leave money on the table.</p><p>A time series forecast of tax revenue gives your CFO a defensible, data-driven basis for the budget proposal. You are not just guessing. You have a model. Similarly, forecasting utility demand means your water treatment plant and electrical grid are scaled for the population five years from now, not for the population from five years ago.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s30">
+  <span class="tag ">ACTIVITY 1</span>
+  <h1 class="slide-title">Class Activity 1: Visualizing Time Series</h1>
+  <div class="highlight-box"><strong>Dataset:</strong> sales_data.csv &nbsp;|&nbsp; <strong>Tool:</strong> Google Colab — SalesTimeSeries.ipynb</div>
+  <ol class="step-list"><li><span class="step-num">1</span><div>Load <code>sales_data.csv</code> and set Date as the index using <code>parse_dates</code></div></li><li><span class="step-num">2</span><div>Plot the time series of Sales over time using matplotlib</div></li><li><span class="step-num">3</span><div>Add a 12-month rolling mean to the same plot to show the smoothed trend</div></li><li><span class="step-num">4</span><div>Add axis labels, a chart title, and a legend to your chart</div></li><li><span class="step-num">5</span><div>Write 2–3 sentences describing the patterns you observe</div></li></ol>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Activity 1 is your hands-on warm-up for this week. You are going to open the SalesTimeSeries.ipynb notebook in Google Colab, load the sales_data.csv file, and do three things: plot the raw series, overlay the twelve-month rolling mean, and write a brief description of what you observe.</p><p>Pay close attention to how you label your axes and your legend. A chart without labels is not a professional deliverable. Take about fifteen minutes on this, then we will discuss what everyone found as a class.</p></div>
+  </div>
+</div>
+<div class="slide" id="s31">
+  <span class="tag ">ACTIVITY 2</span>
+  <h1 class="slide-title">Activity 2: Trend Analysis — Question Guide</h1>
+  <div class="mistake-card"><div class="bad-row" style="color:var(--navy);font-size:15px;">Q1 — Plot &amp; Describe</div><div style="font-size:14px;color:var(--muted);">Describe trend direction, seasonal patterns, and any unusual spikes or dips in 2–3 sentences.</div></div>
+  <div class="mistake-card"><div class="bad-row" style="color:var(--navy);font-size:15px;">Q2 — 12-Month Moving Average</div><div style="font-size:14px;color:var(--muted);"><code>df['MA12'] = df['Sales'].rolling(12).mean()</code> — overlay on same plot. Describe what the smoothed line reveals vs. the raw series.</div></div>
+  <div class="mistake-card"><div class="bad-row" style="color:var(--navy);font-size:15px;">Q3 — Linear Regression Trend</div><div style="font-size:14px;color:var(--muted);">Create time_idx, fit LinearRegression, plot the trend line, and report the slope in plain language (e.g., "sales grow by X units/month on average").</div></div>
+  <div class="mistake-card"><div class="bad-row" style="color:var(--navy);font-size:15px;">Q4 — Compare MA vs. Regression</div><div style="font-size:14px;color:var(--muted);">MA shows the shape of the trend; Regression quantifies the rate of change. They are complementary — use both for different purposes.</div></div>
+  <div class="mistake-card"><div class="bad-row" style="color:var(--navy);font-size:15px;">Q5 — Discuss Limitations</div><div style="font-size:14px;color:var(--muted);">MA loses data and lags; Regression assumes linearity and independent observations — a key assumption violated by time series data.</div></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Let me walk you through Activity 2 before you start. Question one asks you to plot and describe — do not just make the chart, write two or three sentences about what you see. Question two: the one line of code is straightforward, but the description is where the grade is.</p><p>Question three: report the slope numerically and interpret it. Question four: this is an analytical comparison question — the key insight is that they are complementary, not competing. Question five: show me you understand the assumptions being violated. That is what separates good analysts from great ones.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s32">
+  <span class="tag ">TIPS</span>
+  <h1 class="slide-title">Common Mistakes to Avoid</h1>
+  <div class="mistake-card"><div class="bad-row">✗ Forgetting parse_dates when loading CSV</div><div class="good-row">✓ Always use parse_dates=['Date'], index_col='Date' — verify with df.index.dtype</div></div>
+  <div class="mistake-card"><div class="bad-row">✗ Fitting ARIMA on non-stationary data</div><div class="good-row">✓ Run ADF test first; difference until stationary (p &lt; 0.05), then fit ARIMA</div></div>
+  <div class="mistake-card"><div class="bad-row">✗ Evaluating accuracy on training data</div><div class="good-row">✓ Always hold out a test set before fitting; evaluate only on the held-out test set</div></div>
+  <div class="mistake-card"><div class="bad-row">✗ Reporting 'MAPE = 8.3%' with no interpretation</div><div class="good-row">✓ Say: 'MAPE of 8.3% = excellent accuracy — our forecast is off by less than 9% on average'</div></div>
+  <div class="mistake-card"><div class="bad-row">✗ Choosing the model with the best training fit</div><div class="good-row">✓ Compare models on test-set performance only; lower out-of-sample error wins</div></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Let me share the five most common mistakes I see in student submissions. First: forgetting to parse dates — your plot will show numbers instead of dates, and nothing will work correctly. Second: fitting ARIMA before testing for stationarity — this invalidates your model entirely. Third: evaluating your model on the training data — that is like grading yourself on an open-book exam you wrote yourself.</p><p>Fourth: reporting MAPE as a bare number without saying what it means. Fifth: choosing your model based on training fit instead of test set performance. The goal is generalization, not memorization. A model that fits training data perfectly but fails on new data is worse than useless.</p></div>
+  </div>
+</div>
+<div class="slide" id="s33">
+  <span class="tag ">DIAGNOSTICS</span>
+  <h1 class="slide-title">Reading ACF and PACF Plots</h1>
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">ACF — Autocorrelation Function</h3>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Correlation of series with its own lags</span></li><li><span class="dot" ></span><span>Includes direct AND indirect effects</span></li><li><span class="dot" ></span><span>Seasonal: spikes at lags 12, 24, 36...</span></li><li><span class="dot" ></span><span><strong>Use to choose q</strong> in ARIMA</span></li></ul>
+    </div>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--teal);">PACF — Partial Autocorrelation</h3>
+      <ul class="slide-list"><li><span class="dot" style="background:var(--teal);"></span><span>Direct correlation after removing indirect effects</span></li><li><span class="dot" style="background:var(--teal);"></span><span>Cuts off sharply for AR processes</span></li><li><span class="dot" style="background:var(--teal);"></span><span>More targeted than the ACF</span></li><li><span class="dot" style="background:var(--teal);"></span><span><strong>Use to choose p</strong> in ARIMA</span></li></ul>
+    </div>
+  </div>
+  <pre><span class="kw">from</span> statsmodels.graphics.tsaplots <span class="kw">import</span> plot_acf, plot_pacf
+<span class="fn">plot_acf</span>(df[<span class="st">'Sales'</span>], lags=<span class="num">36</span>)
+<span class="fn">plot_pacf</span>(df[<span class="st">'Sales'</span>], lags=<span class="num">36</span>)
+plt.<span class="fn">show</span>()</pre>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>ACF and PACF plots are diagnostic tools that help you choose the right parameters for your ARIMA model. The <strong>ACF plot</strong> shows the correlation between the series and its own past values. If spikes appear at lags twelve and twenty-four for monthly data, that confirms a seasonal pattern. Use ACF to choose q.</p><p>The <strong>PACF plot</strong> shows the direct relationship between the series and each lag, after removing the influence of all shorter lags. Significant spikes in the PACF at lags one and two, followed by a sharp cutoff, suggests an AR(2) model. Use PACF to choose p.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s34">
+  <span class="tag ">STATIONARITY</span>
+  <h1 class="slide-title">Differencing: Making a Series Stationary</h1>
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="text-align:left;">First Difference</h3>
+      <div class="formula-bar">Y'<sub>t</sub> = Y<sub>t</sub> − Y<sub>t−1</sub></div>
+      <pre>df[<span class="st">'diff1'</span>] = df[<span class="st">'Sales'</span>].<span class="fn">diff</span>()</pre>
+      <h3 style="text-align:left;margin-top:14px;">Seasonal Difference</h3>
+      <div class="formula-bar">Y'<sub>t</sub> = Y<sub>t</sub> − Y<sub>t−12</sub></div>
+      <pre>df[<span class="st">'sdiff'</span>] = df[<span class="st">'Sales'</span>].<span class="fn">diff</span>(<span class="num">12</span>)</pre>
+    </div>
+    <div class="card">
+      <h3 style="text-align:left;color:var(--navy);">What Differencing Does</h3>
+      <ul class="slide-list"><li><span class="dot" ></span><span>Converts levels to changes — removes the trend</span></li><li><span class="dot" ></span><span>First diff (d=1) → removes linear trend</span></li><li><span class="dot" ></span><span>Seasonal diff (D=1) → removes annual seasonality</span></li><li><span class="dot" ></span><span>Re-run ADF after each diff — stop when p &lt; 0.05</span></li><li><span class="dot" ></span><span>Over-differencing introduces noise — stop early!</span></li></ul>
+    </div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Differencing is the most important transformation in time series analysis. Instead of working with the raw sales values, we work with the month-to-month changes. This removes the trend — if sales grow by a constant amount each month, the differences will be roughly constant, and the drift disappears.</p><p>The critical rule: only difference as many times as necessary. Over-differencing creates artificial patterns. Run the ADF test after each round and stop as soon as the series is stationary. For most business data, one round of differencing is usually enough.</p></div>
+  </div>
+</div>
+<div class="slide" id="s35">
+  <span class="tag ">INTERPRETATION</span>
+  <h1 class="slide-title">Forecast Uncertainty: Confidence Intervals</h1>
+  <div class="quote-box">No forecast is perfectly certain. A confidence interval shows the range where the true future value is likely to fall.</div>
+  <ul class="slide-list"><li><span class="dot" ></span><span><strong>95% CI:</strong> We expect the actual value to fall within this band 95% of the time</span></li><li><span class="dot" ></span><span>CIs <strong>widen</strong> as we forecast further into the future — more uncertainty over time</span></li><li><span class="dot" ></span><span>Narrow CI = model fits well; Wide CI = high uncertainty, use with caution</span></li><li><span class="dot" ></span><span>Always show CIs in presentations — it is intellectually honest</span></li><li><span class="dot" ></span><span>A point forecast without uncertainty bands can mislead decision-makers</span></li></ul>
+  <button class="expand-btn" onclick="toggleDetail(this)"><span>Python code for confidence intervals</span><span class="arrow">▼</span></button>
+  <div class="detail-panel"><pre>forecast_obj = model.<span class="fn">get_forecast</span>(<span class="num">12</span>)
+summary = forecast_obj.<span class="fn">summary_frame</span>()
+<span class="cm"># Columns: mean, mean_ci_lower, mean_ci_upper</span>
+plt.<span class="fn">plot</span>(summary[<span class="st">'mean'</span>], label=<span class="st">'Forecast'</span>)
+plt.<span class="fn">fill_between</span>(summary.index,
+    summary[<span class="st">'mean_ci_lower'</span>],
+    summary[<span class="st">'mean_ci_upper'</span>],
+    alpha=<span class="num">0.3</span>, label=<span class="st">'95% CI'</span>)
+plt.<span class="fn">legend</span>()</pre></div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>One of the biggest mistakes junior analysts make is presenting a single-line forecast without any indication of uncertainty. Every forecast is a probability distribution, not a single point. The confidence interval shows the range within which we expect the actual value to land, ninety-five times out of one hundred.</p><p>Notice that as you forecast further into the future, the bands widen. This is correct and expected. When you present your forecast to a leadership team, always include these bands. A forecast that claims false precision will undermine your credibility the moment reality deviates from the single line you drew.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s36">
+  <span class="tag ">MODEL SELECTION</span>
+  <h1 class="slide-title">Which Forecasting Method Should I Use?</h1>
+  <table class="slide-table"><thead><tr><th>Scenario</th><th>Recommended Method</th><th>Why</th></tr></thead><tbody><tr><td>Need to see the trend visually</td><td>Moving Average (12-month)</td><td>Smooths noise without assumptions</td></tr><tr><td>Need to report trend rate to management</td><td>Linear Regression</td><td>Provides slope with statistical test</td></tr><tr><td>Data has clear seasonality + trend</td><td>Holt-Winters (Triple ES)</td><td>Purpose-built for exactly this case</td></tr><tr><td>Complex seasonal + autocorrelated data</td><td>SARIMA</td><td>Most powerful for time series</td></tr><tr><td>Need a quick baseline forecast</td><td>ARIMA(1,1,1)</td><td>Reliable, low-parameter starting point</td></tr></tbody></table>
+  <div class="foot-note">Start simple → evaluate → add complexity only if accuracy does not improve enough.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Here is your decision table. Use it every time you approach a new forecasting problem. Start with the simplest method that fits the scenario. If you just need to show a trend to a stakeholder, a twelve-month moving average is perfect. If your data has both trend and seasonality — which is true for sales_data.csv — Holt-Winters is your first choice.</p><p>The key principle is <strong>parsimony</strong>: use the simplest model that achieves acceptable accuracy. Complex models are harder to explain, harder to maintain, and more prone to overfitting.</p></div>
+  </div>
+</div>
+<div class="slide" id="s37">
+  <span class="tag ">COMMUNICATION</span>
+  <h1 class="slide-title">Communicating Forecasts to Non-Technical Audiences</h1>
+  <div class="mistake-card"><div class="bad-row">✗ 'MAPE = 7.3%, RMSE = 4.12'</div><div class="good-row">✓ 'Our model is accurate to within 7% — our forecast of 500 units could be off by roughly 35 units.'</div></div>
+  <div class="mistake-card"><div class="bad-row">✗ Show ACF/PACF plots in a board meeting</div><div class="good-row">✓ Show only the forecast chart with a confidence band. Put diagnostics in a technical appendix.</div></div>
+  <div class="mistake-card"><div class="bad-row">✗ 'Sales will be exactly $1.4M in Q4.'</div><div class="good-row">✓ 'We forecast $1.3–1.5M in Q4 with 95% confidence, assuming no major disruptions.'</div></div>
+  <div class="highlight-box">The best forecast is useless if the decision-maker does not trust or understand it.</div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>One of the most important skills in your careers will not be building the model — it will be translating the model into language that drives decisions. A city council member does not know what MAPE means. A hospital CFO does not need to see a PACF plot.</p><p>Translate your metrics into business language. Report uncertainty in plain terms. And always frame your forecast in the context of the decision it is meant to support. The model is the means. The decision is the end.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s38">
+  <span class="tag ">CODE REFERENCE</span>
+  <h1 class="slide-title">Week 10 Complete Code Reference</h1>
+  <pre><span class="cm"># 1. IMPORTS</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd, numpy <span class="kw">as</span> np, matplotlib.pyplot <span class="kw">as</span> plt
+<span class="kw">from</span> statsmodels.tsa.seasonal <span class="kw">import</span> seasonal_decompose
+<span class="kw">from</span> statsmodels.tsa.stattools <span class="kw">import</span> adfuller
+<span class="kw">from</span> statsmodels.tsa.holtwinters <span class="kw">import</span> ExponentialSmoothing
+<span class="kw">from</span> statsmodels.tsa.arima.model <span class="kw">import</span> ARIMA
+
+<span class="cm"># 2. LOAD</span>
+df = pd.<span class="fn">read_csv</span>(<span class="st">'sales_data.csv'</span>, parse_dates=[<span class="st">'Date'</span>], index_col=<span class="st">'Date'</span>)
+
+<span class="cm"># 3. VISUALIZE</span>
+df[<span class="st">'Sales'</span>].<span class="fn">plot</span>(title=<span class="st">'Monthly Sales'</span>); plt.<span class="fn">show</span>()
+
+<span class="cm"># 4. MOVING AVERAGE</span>
+df[<span class="st">'MA12'</span>] = df[<span class="st">'Sales'</span>].<span class="fn">rolling</span>(<span class="num">12</span>).<span class="fn">mean</span>()
+df[[<span class="st">'Sales'</span>,<span class="st">'MA12'</span>]].<span class="fn">plot</span>(); plt.<span class="fn">show</span>()
+
+<span class="cm"># 5. ADF TEST</span>
+result = <span class="fn">adfuller</span>(df[<span class="st">'Sales'</span>]); <span class="fn">print</span>(<span class="st">f"p-value: {{result[1]:.4f}}"</span>)
+
+<span class="cm"># 6. DECOMPOSE</span>
+<span class="fn">seasonal_decompose</span>(df[<span class="st">'Sales'</span>], model=<span class="st">'additive'</span>, period=<span class="num">12</span>).<span class="fn">plot</span>(); plt.<span class="fn">show</span>()
+
+<span class="cm"># 7. HOLT-WINTERS</span>
+train, test = df.iloc[:<span class="num">-12</span>], df.iloc[<span class="num">-12</span>:]
+hw = <span class="fn">ExponentialSmoothing</span>(train[<span class="st">'Sales'</span>], trend=<span class="st">'add'</span>, seasonal=<span class="st">'add'</span>, seasonal_periods=<span class="num">12</span>).<span class="fn">fit</span>()
+hw.<span class="fn">forecast</span>(<span class="num">12</span>).<span class="fn">plot</span>(); plt.<span class="fn">show</span>()
+
+<span class="cm"># 8. ARIMA(1,1,1)</span>
+arima = <span class="fn">ARIMA</span>(train[<span class="st">'Sales'</span>], order=(<span class="num">1</span>,<span class="num">1</span>,<span class="num">1</span>)).<span class="fn">fit</span>()
+arima.<span class="fn">forecast</span>(<span class="num">12</span>)</pre>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Here is your all-in-one code reference for Week 10. The entire pipeline from loading data to generating ARIMA forecasts is contained in these few lines. Notice the logical progression: load, visualize, smooth, test stationarity, decompose, fit models. This is exactly the seven-step workflow we covered on slide 26.</p><p>Keep this slide handy while working on your notebook. In your actual notebook, each of these blocks will have more detail, chart labels, and written interpretations — but this skeleton is the minimum viable pipeline.</p></div>
+  </div>
+</div>
+<div class="slide" id="s39">
+  <span class="tag ">SUMMARY</span>
+  <h1 class="slide-title">Week 10 Key Takeaways</h1>
+  <ol class="step-list"><li><span class="step-num">1</span><div>Time series = measurements at equal intervals; <strong>always visualize before modeling.</strong></div></li><li><span class="step-num">2</span><div>Four components: <strong>Trend</strong> (direction), <strong>Seasonality</strong> (cycles), <strong>Cyclical</strong> (long waves), <strong>Irregular</strong> (noise).</div></li><li><span class="step-num">3</span><div>Stationarity is required for ARIMA — test with ADF; fix with differencing (d=1 removes linear trend).</div></li><li><span class="step-num">4</span><div>Moving Average shows the trend's <em>shape</em>; Linear Regression <em>quantifies</em> the rate — use both.</div></li><li><span class="step-num">5</span><div>Holt-Winters handles trend + seasonality; ARIMA/SARIMA is the industry-standard for complex data.</div></li><li><span class="step-num">6</span><div>Evaluate on held-out test data using MAE, RMSE, and MAPE — <em>never</em> on training data alone.</div></li><li><span class="step-num">7</span><div>Present forecasts with confidence bands and interpret in plain business language for decision-makers.</div></li></ol>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Let me bring it all together. Seven key takeaways for Week 10. One: always plot first. Two: every series has four components. Three: stationarity is a prerequisite for ARIMA. Four: moving average and regression serve different purposes — use both. Five: Holt-Winters and SARIMA are your power tools. Six: evaluate on test data only. Seven: translate results into plain language.</p><p>These seven points should guide every time series analysis you do from here forward — not just in this course, but in your careers.</p></div>
+  </div>
+</div>
+<div class="slide" id="s40">
+  <div class="closing-slide">
+    <div style="font-size:12px;letter-spacing:3px;color:#9ec8e0;font-weight:700;margin-bottom:10px;">WHAT'S NEXT</div>
+    <h1 style="font-family:Cambria,serif;font-size:clamp(22px,4vw,34px);color:white;font-weight:700;margin-bottom:20px;">Assignments &amp; Looking Ahead</h1>
+    <div class="grid-2" style="margin-bottom:4px;">
+      <div style="background:#1d3d60;border:1px solid #2a5580;border-radius:12px;padding:18px;"><div style="color:#9ec8e0;font-size:13px;font-weight:700;margin-bottom:7px;">📊 ACTIVITY 1</div><p style="color:white;font-size:14px;line-height:1.6;">Visualize the time series and add rolling MA — submit notebook by end of class.</p></div>
+      <div style="background:#1d3d60;border:1px solid #2a5580;border-radius:12px;padding:18px;"><div style="color:#9ec8e0;font-size:13px;font-weight:700;margin-bottom:7px;">📈 ACTIVITY 2</div><p style="color:white;font-size:14px;line-height:1.6;">Complete all 5 questions on trend analysis (MA, regression, comparison, limitations).</p></div>
+      <div style="background:#1d3d60;border:1px solid #2a5580;border-radius:12px;padding:18px;"><div style="color:#9ec8e0;font-size:13px;font-weight:700;margin-bottom:7px;">💻 NOTEBOOK</div><p style="color:white;font-size:14px;line-height:1.6;">SalesTimeSeries.ipynb — use the provided dataset <code style="color:#86efac;">sales_data.csv</code></p></div>
+      <div style="background:#1d3d60;border:1px solid #2a5580;border-radius:12px;padding:18px;"><div style="color:#9ec8e0;font-size:13px;font-weight:700;margin-bottom:7px;">🔭 WEEK 11 PREVIEW</div><p style="color:white;font-size:14px;line-height:1.6;">Regression revisited: multivariate models and feature engineering for prediction.</p></div>
+    </div>
+    <div class="closing-footer">Questions? Office hours posted on Blackboard &nbsp;|&nbsp; MG628 Spring 2026</div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Before we wrap up, here are your deliverables. Activity 1 should be completed and submitted before you leave class today — just the visualization with the rolling mean and your written description. Activity 2 is your take-home assignment — all five questions on trend analysis, due by the next class session.</p><p>Use the SalesTimeSeries.ipynb notebook and the sales_data.csv file. Everything is posted on Blackboard. Next week we are returning to regression — but this time in a multivariate context. Great work today.</p></div>
+  </div>
+</div>
+<div class="slide ltbg" id="s41">
+  <span class="tag ">BONUS</span>
+  <h1 class="slide-title">Bonus: Auto-Select Parameters with pmdarima</h1>
+  <pre><span class="cm"># Install if needed: pip install pmdarima</span>
+<span class="kw">from</span> pmdarima <span class="kw">import</span> auto_arima
+
+model = <span class="fn">auto_arima</span>(
+    train[<span class="st">'Sales'</span>],
+    seasonal=<span class="kw">True</span>,
+    m=<span class="num">12</span>,
+    stepwise=<span class="kw">True</span>,
+    information_criterion=<span class="st">'aic'</span>,
+    trace=<span class="kw">True</span>
+)
+<span class="fn">print</span>(model.<span class="fn">summary</span>())
+forecast = model.<span class="fn">predict</span>(<span class="num">12</span>)</pre>
+  <ul class="slide-list"><li><span class="dot" ></span><span>auto_arima tests many (p,d,q)(P,D,Q) combinations and selects the model with the lowest AIC</span></li><li><span class="dot" ></span><span><strong>AIC</strong> — Akaike Information Criterion: measures fit while penalizing complexity. Lower = better.</span></li><li><span class="dot" ></span><span><code>trace=True</code> shows the search process — great for learning how the selection works</span></li><li><span class="dot" ></span><span>Use as a time-saver; understand the manual workflow first so you can interpret the output</span></li></ul>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>Once you understand how to manually select p, d, and q, you can use auto_arima from the pmdarima library to automate the search. It tests many combinations of parameters and selects the one with the best AIC score — the Akaike Information Criterion, which balances model fit against complexity.</p><p>I recommend using auto_arima to check your manual selection: if they agree, you have strong confidence in your choice. If they disagree, investigate why — that discrepancy is usually educational. But do not use auto_arima as a substitute for understanding the manual workflow.</p></div>
+  </div>
+</div>
+<div class="slide" id="s42">
+  <span class="tag ">BONUS</span>
+  <h1 class="slide-title">Bonus: Residual Diagnostics</h1>
+  <pre><span class="cm"># Built-in diagnostic plots (4 panels)</span>
+arima_model.<span class="fn">plot_diagnostics</span>(figsize=(<span class="num">12</span>,<span class="num">8</span>))
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()
+
+<span class="cm"># Ljung-Box test: are residuals white noise?</span>
+<span class="kw">from</span> statsmodels.stats.diagnostic <span class="kw">import</span> acorr_ljungbox
+lb = <span class="fn">acorr_ljungbox</span>(arima_model.resid, lags=[<span class="num">12</span>], return_df=<span class="kw">True</span>)
+<span class="fn">print</span>(lb)  <span class="cm"># p &gt; 0.05 → residuals are white noise ✓</span></pre>
+  <div class="grid-4">
+    <div class="card"><h3>1 — Residual Plot</h3><p>Should look like random noise — no patterns or trends</p></div>
+    <div class="card"><h3>2 — Histogram</h3><p>Residuals should be roughly bell-shaped (normal distribution)</p></div>
+    <div class="card"><h3>3 — Q-Q Plot</h3><p>Points should fall along the diagonal reference line</p></div>
+    <div class="card green-bg"><h3>4 — Ljung-Box p &gt; 0.05</h3><p>Confirms residuals are not autocorrelated ✓</p></div>
+  </div>
+  <div class="presenter-notes">
+    <div class="notes-label " onclick="toggleNotes(this)"><span>🎙 PRESENTER NOTES</span><span class="toggle-arrow">▼</span></div>
+    <div class="notes-body "><p>A final quality check before you trust your forecast: residual diagnostics. After fitting your ARIMA model, examine the residuals — the differences between what the model predicted and what actually happened. Ideally, residuals should look like white noise: random, no patterns, roughly normally distributed, and not correlated with each other.</p><p>The built-in <code>plot_diagnostics</code> method gives you four diagnostic plots at once. The Ljung-Box test formally tests whether any autocorrelation remains in the residuals. A p-value above 0.05 means the residuals are statistically indistinguishable from white noise — your model has captured all the structure it can. If patterns remain, your model is misspecified and needs adjustment.</p></div>
+  </div>
+</div></div><!-- end slide-area -->
+
+<div id="bottom-nav">
+  <button class="nav-btn" id="prev-btn2" onclick="changeSlide(-1)" disabled>← Back</button>
+  <button class="nav-btn" id="next-btn2" onclick="changeSlide(1)">Next →</button>
+</div>
+
+<script>
+  const TOTAL = 42;
+  let current = 1;
+
+  function changeSlide(dir) {
+    const next = current + dir;
+    if (next < 1 || next > TOTAL) return;
+    document.getElementById('s' + current).classList.remove('active');
+    current = next;
+    document.getElementById('s' + current).classList.add('active');
+    updateNav();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  function updateNav() {
+    document.getElementById('slide-counter').textContent = current + ' / ' + TOTAL;
+    document.getElementById('progress-bar').style.width = ((current-1)/(TOTAL-1)*100).toFixed(1)+'%';
+    ['prev-btn','prev-btn2'].forEach(id => document.getElementById(id).disabled = current===1);
+    ['next-btn','next-btn2'].forEach(id => document.getElementById(id).disabled = current===TOTAL);
+  }
+
+  function toggleNotes(label) {
+    const body = label.nextElementSibling;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    label.classList.toggle('open', !isOpen);
+    label.querySelector('.toggle-arrow').textContent = isOpen ? '▼' : '▲';
+  }
+
+  function toggleDetail(btn) {
+    const panel = btn.nextElementSibling;
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+    btn.classList.toggle('open', !isOpen);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key==='ArrowRight'||e.key==='ArrowDown') changeSlide(1);
+    if (e.key==='ArrowLeft'||e.key==='ArrowUp')   changeSlide(-1);
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) changeSlide(dx < 0 ? 1 : -1);
+  });
+
+  updateNav();
+</script>
+</body>
+</html>
